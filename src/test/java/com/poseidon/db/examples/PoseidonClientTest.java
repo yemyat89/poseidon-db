@@ -2,6 +2,7 @@ package com.poseidon.db.examples;
 
 import static org.junit.Assert.*;
 import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
 import org.junit.After;
 import org.junit.Before;
@@ -27,7 +28,7 @@ public class PoseidonClientTest {
 	}
 
 	@Test
-	public void testClient() {
+	public void testClient() throws IOException {
 		Thread server = new Thread(() -> {
 			try {
 				RequestHandler r = new RequestHandler(dataDir.getAbsolutePath(), FileAccessChoice.MEM_MAP);

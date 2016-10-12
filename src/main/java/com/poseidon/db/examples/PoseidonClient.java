@@ -4,19 +4,17 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
-import org.apache.log4j.Logger;
 import com.poseidon.db.utils.DataConversion;
 import com.poseidon.db.utils.IOUtils;
 
 public class PoseidonClient {
 
-	private final static Logger logger = Logger.getLogger(PoseidonClient.class);
 	public static final int DEFAULT_NUM_OF_RETRY = 3;
 	public static final int DEFAULT_WAIT_BEFORE_RETRY = 3;
 
 	@FunctionalInterface
 	interface Function {
-		public Object call(byte[] key, byte[] value);
+		public Object call(byte[] key, byte[] value) throws IOException;
 	}
 
 	private String host;
@@ -35,23 +33,23 @@ public class PoseidonClient {
 		this.waitBeforeRetry = waitBeforeRetry;
 	}
 
-	public byte[] get(byte[] key) {
+	public byte[] get(byte[] key) throws IOException {
 		return (byte[]) retryLoop(this::getData, key, null);
 	}
 
-	public boolean put(byte[] key, byte[] value) {
+	public boolean put(byte[] key, byte[] value) throws IOException {
 		return (boolean) retryLoop(this::putData, key, value);
 	}
 
-	public boolean delete(byte[] key) {
+	public boolean delete(byte[] key) throws IOException {
 		return (boolean) retryLoop(this::deleteData, key, null);
 	}
 
-	private Object retryLoop(Function func, byte[] key, byte[] value) {
+	private Object retryLoop(Function func, byte[] key, byte[] value) throws IOException {
 		for (int i = 0; i < numOfRetry;) {
 			try {
 				return func.call(key, value);
-			} catch (Exception e) {
+			} catch (IOException e) {
 				i++;
 				if (i == numOfRetry) {
 					throw e;
@@ -66,7 +64,7 @@ public class PoseidonClient {
 		return null;
 	}
 
-	private Object getData(byte[] key, byte[] _dummy) {
+	private Object getData(byte[] key, byte[] _dummy) throws IOException {
 		byte[] value = null;
 
 		try (Socket socket = new Socket(host, port)) {
@@ -89,13 +87,14 @@ public class PoseidonClient {
 			socket.close();
 			out.close();
 			in.close();
-		} catch (IOException e) {
-			logger.debug("Failed to get data, there may be a retry");
 		}
+
 		return (value == null || value.length == 0) ? null : value;
 	}
 
-	private Object putData(byte[] key, byte[] value) {
+	private Object putData(byte[] key, byte[] value) throws IOException {
+		byte[] successBuf = new byte[1];
+
 		try (Socket socket = new Socket(host, port)) {
 			DataOutputStream out = new DataOutputStream(socket.getOutputStream());
 			DataInputStream in = new DataInputStream(socket.getInputStream());
@@ -108,21 +107,19 @@ public class PoseidonClient {
 			out.write(data);
 			out.flush();
 
-			byte[] successBuf = new byte[1];
 			in.read(successBuf);
 
 			socket.close();
 			out.close();
 			in.close();
-
-			return (successBuf[0] == 1);
-		} catch (IOException e) {
-			logger.debug("Failed to put data, there may be a retry");
 		}
-		return false;
+
+		return successBuf[0] == 1;
 	}
 
-	private Object deleteData(byte[] key, byte[] _dummy) {
+	private Object deleteData(byte[] key, byte[] _dummy) throws IOException {
+		byte[] successBuf = new byte[1];
+
 		try (Socket socket = new Socket(host, port)) {
 			DataOutputStream out = new DataOutputStream(socket.getOutputStream());
 			DataInputStream in = new DataInputStream(socket.getInputStream());
@@ -134,17 +131,13 @@ public class PoseidonClient {
 			out.write(data);
 			out.flush();
 
-			byte[] successBuf = new byte[1];
 			in.read(successBuf);
 
 			socket.close();
 			out.close();
 			in.close();
-
-			return (successBuf[0] == 1);
-		} catch (IOException e) {
-			logger.debug("Failed to delete data, there may be a retry");
 		}
-		return false;
+
+		return (successBuf[0] == 1);
 	}
 }
