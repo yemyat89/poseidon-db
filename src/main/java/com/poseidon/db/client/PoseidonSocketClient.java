@@ -1,4 +1,4 @@
-package com.poseidon.db.examples;
+package com.poseidon.db.client;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -7,7 +7,7 @@ import java.net.Socket;
 import com.poseidon.db.utils.DataConversion;
 import com.poseidon.db.utils.IOUtils;
 
-public class PoseidonClient {
+public class PoseidonSocketClient implements PoseidonClient {
 
 	public static final int DEFAULT_NUM_OF_RETRY = 3;
 	public static final int DEFAULT_WAIT_BEFORE_RETRY = 3;
@@ -22,25 +22,28 @@ public class PoseidonClient {
 	private int numOfRetry;
 	private int waitBeforeRetry;
 
-	public PoseidonClient(String host, int port) {
+	public PoseidonSocketClient(String host, int port) {
 		this(host, port, DEFAULT_NUM_OF_RETRY, DEFAULT_WAIT_BEFORE_RETRY);
 	}
 
-	public PoseidonClient(String host, int port, int numOfRetry, int waitBeforeRetry) {
+	public PoseidonSocketClient(String host, int port, int numOfRetry, int waitBeforeRetry) {
 		this.host = host;
 		this.port = port;
 		this.numOfRetry = numOfRetry;
 		this.waitBeforeRetry = waitBeforeRetry;
 	}
-
+	
+	@Override
 	public byte[] get(byte[] key) throws IOException {
 		return (byte[]) retryLoop(this::getData, key, null);
 	}
-
+	
+	@Override
 	public boolean put(byte[] key, byte[] value) throws IOException {
 		return (boolean) retryLoop(this::putData, key, value);
 	}
-
+	
+	@Override
 	public boolean delete(byte[] key) throws IOException {
 		return (boolean) retryLoop(this::deleteData, key, null);
 	}
@@ -83,8 +86,6 @@ public class PoseidonClient {
 			int respLength = DataConversion.byteArrayToInt(respLengthBuf);
 			value = new byte[respLength];
 			in.read(value);
-
-			socket.close();
 		}
 
 		return (value == null || value.length == 0) ? null : value;
@@ -106,8 +107,6 @@ public class PoseidonClient {
 			out.flush();
 
 			in.read(successBuf);
-
-			socket.close();
 		}
 
 		return successBuf[0] == 1;
@@ -128,8 +127,6 @@ public class PoseidonClient {
 			out.flush();
 
 			in.read(successBuf);
-
-			socket.close();
 		}
 
 		return (successBuf[0] == 1);

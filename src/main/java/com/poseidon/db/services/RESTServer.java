@@ -9,8 +9,9 @@ import com.poseidon.db.KeyValueStore;
 public class RESTServer {
 
 	private final static Logger logger = Logger.getLogger(RESTServer.class);
-	private static final String HOSTNAME = "localhost";
-	private static final int PORT = 5050;
+	public static final String DATA_ACCESS_PATH = "data-access";
+	public static final String HOSTNAME = "localhost";
+	public static final int PORT = 5050;
 
 	private Server server;
 	private KeyValueStore store;

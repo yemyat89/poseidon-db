@@ -11,30 +11,17 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import com.poseidon.db.KeyValueStore;
+import com.poseidon.db.utils.RESTUtils.DataFormat.DeleteRequest;
+import com.poseidon.db.utils.RESTUtils.DataFormat.GetResult;
+import com.poseidon.db.utils.RESTUtils.DataFormat.PostRequest;
+import com.poseidon.db.utils.RESTUtils.DataFormat.UpdateResult;
 
-@Path("data-access")
+@Path(RESTServer.DATA_ACCESS_PATH)
 public class DataAccessResource {
-
-	static class GetResult {
-		public String result;
-	}
-
-	static class PostRequest {
-		public String key;
-		public String value;
-	}
-
-	static class DeleteRequest {
-		public String key;
-	}
-
-	static class PostDeleteResult {
-		public boolean success;
-	}
 
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
-	public GetResult findKey(@Context ServletContext servletContext, @QueryParam("key") String key) {
+	public GetResult getValue(@Context ServletContext servletContext, @QueryParam("key") String key) {
 
 		KeyValueStore store = (KeyValueStore) servletContext.getAttribute("kvstore");
 		byte[] value = store.get(key.getBytes());
@@ -52,11 +39,11 @@ public class DataAccessResource {
 	@POST
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
-	public PostDeleteResult createOrders(@Context ServletContext servletContext, PostRequest data) {
+	public UpdateResult putKeyValue(@Context ServletContext servletContext, PostRequest data) {
 
 		KeyValueStore store = (KeyValueStore) servletContext.getAttribute("kvstore");
 
-		PostDeleteResult postDeleteRequest = new PostDeleteResult();
+		UpdateResult postDeleteRequest = new UpdateResult();
 		postDeleteRequest.success = store.put(data.key.getBytes(), data.value.getBytes());
 
 		return postDeleteRequest;
@@ -65,11 +52,11 @@ public class DataAccessResource {
 	@DELETE
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
-	public PostDeleteResult deleteKey(@Context ServletContext servletContext, DeleteRequest data) {
+	public UpdateResult deleteKeyValue(@Context ServletContext servletContext, DeleteRequest data) {
 
 		KeyValueStore store = (KeyValueStore) servletContext.getAttribute("kvstore");
 
-		PostDeleteResult postDeleteResult = new PostDeleteResult();
+		UpdateResult postDeleteResult = new UpdateResult();
 		postDeleteResult.success = store.delete(data.key.getBytes());
 
 		return postDeleteResult;

@@ -8,8 +8,10 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import com.poseidon.db.TestUtils;
-import com.poseidon.db.examples.PoseidonClient;
+import com.poseidon.db.client.PoseidonRESTClient;
+import com.poseidon.db.client.PoseidonSocketClient;
 import com.poseidon.db.io.access.FileAccessChoice;
+import com.poseidon.db.services.RESTServer;
 import com.poseidon.db.services.RequestHandler;
 
 public class PoseidonClientTest {
@@ -28,11 +30,12 @@ public class PoseidonClientTest {
 	}
 
 	@Test
-	public void testClient() throws IOException {
+	public void testSocketAndRESTClient() throws IOException {
+		RequestHandler requestHandler = new RequestHandler(dataDir.getAbsolutePath(), FileAccessChoice.MEM_MAP);
+		
 		Thread server = new Thread(() -> {
 			try {
-				RequestHandler r = new RequestHandler(dataDir.getAbsolutePath(), FileAccessChoice.MEM_MAP);
-				r.start();
+				requestHandler.start();
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -44,8 +47,10 @@ public class PoseidonClientTest {
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-
-		PoseidonClient client = new PoseidonClient("localhost", 5000);
+		
+		// Socket Client
+		
+		PoseidonSocketClient client = new PoseidonSocketClient("localhost", 5000);
 
 		String data = "Advantage old had otherwise sincerity dependent additions. "
 				+ "It in adapted natural hastily is justice. Six draw you him full "
@@ -71,6 +76,29 @@ public class PoseidonClientTest {
 
 		client.delete(keywords[10].getBytes());
 		assertEquals(client.get(keywords[10].getBytes()), null);
-	}
+		
+		// REST Client
+		
+		String baseUrl = "http://" + RESTServer.HOSTNAME + ":" + RESTServer.PORT + "/" + RESTServer.DATA_ACCESS_PATH;
+		System.out.println(baseUrl);
+		PoseidonRESTClient restClient = new PoseidonRESTClient(baseUrl);
 
+		for (String keyword : keywords) {
+			byte[] key = keyword.getBytes();
+			byte[] value = (keyword + "-#######-" + keyword + "-#######-" + keyword).getBytes();
+			restClient.put(key, value);
+		}
+
+		for (String keyword : keywords) {
+			byte[] key = keyword.getBytes();
+			byte[] value = restClient.get(key);
+			byte[] expectedValue = (keyword + "-#######-" + keyword + "-#######-" + keyword).getBytes();
+			assertTrue(Arrays.equals(expectedValue, value));
+		}
+
+		restClient.delete(keywords[10].getBytes());
+		assertEquals(restClient.get(keywords[10].getBytes()), null);
+		
+		requestHandler.stop(false);
+	}
 }
