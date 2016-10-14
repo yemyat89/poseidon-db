@@ -19,6 +19,7 @@ import com.poseidon.db.representation.KeyValuePair;
 import com.poseidon.db.utils.BlockCache;
 import com.poseidon.db.utils.BloomFilter;
 import com.poseidon.db.utils.DataConversion;
+import com.poseidon.db.utils.IOUtils;
 import com.poseidon.db.utils.Pair;
 
 public class SSTable {
@@ -150,10 +151,12 @@ public class SSTable {
 				indexList.add(new IndexData(kvp.getKey(), sstableFile.getFilePointer()));
 			}
 
-			sstableFile.write(DataConversion.intToByteArray(recordLength));
-			sstableFile.write(DataConversion.intToByteArray(keyLength));
-			sstableFile.write(kvp.getKey().getData());
-			sstableFile.write(kvp.getValue().getData());
+			byte[] recordLengthData = DataConversion.intToByteArray(recordLength);
+			byte[] keyLengthData = DataConversion.intToByteArray(keyLength);
+			byte[] dataToWrite = IOUtils.concatByteArrays(recordLengthData, keyLengthData, kvp.getKey().getData(),
+					kvp.getValue().getData());
+
+			sstableFile.write(dataToWrite);
 
 			blockByteCount += 4 + 4 + recordLength;
 			totalByteCount += 4 + 4 + recordLength;
@@ -164,10 +167,14 @@ public class SSTable {
 
 		long indexPosition = sstableFile.getFilePointer();
 		for (IndexData idPair : indexList) {
-			sstableFile.write(DataConversion.intToByteArray(idPair.getKey().length()));
-			sstableFile.write(idPair.getKey().getData());
-			sstableFile.write(DataConversion.intToByteArray(idPair.getByteCount()));
-			sstableFile.write(DataConversion.longToByteArray(idPair.getOffset()));
+
+			byte[] keyLengthData = DataConversion.intToByteArray(idPair.getKey().length());
+			byte[] keyData = idPair.getKey().getData();
+			byte[] byteCountData = DataConversion.intToByteArray(idPair.getByteCount());
+			byte[] offsetData = DataConversion.longToByteArray(idPair.getOffset());
+			byte[] dataToWrite = IOUtils.concatByteArrays(keyLengthData, keyData, byteCountData, offsetData);
+
+			sstableFile.write(dataToWrite);
 		}
 
 		long filterPosition = sstableFile.getFilePointer();
@@ -176,10 +183,14 @@ public class SSTable {
 
 		sstableFile.seek(0);
 
-		sstableFile.write(DataConversion.intToByteArray(itemCount));
-		sstableFile.write(DataConversion.intToByteArray(totalByteCount));
-		sstableFile.write(DataConversion.longToByteArray(indexPosition));
-		sstableFile.write(DataConversion.longToByteArray(filterPosition));
+		byte[] itemCountData = DataConversion.intToByteArray(itemCount);
+		byte[] totalByteData = DataConversion.intToByteArray(totalByteCount);
+		byte[] indexPositionData = DataConversion.longToByteArray(indexPosition);
+		byte[] filterPositionData = DataConversion.longToByteArray(filterPosition);
+		byte[] dataToWrite = IOUtils.concatByteArrays(itemCountData, totalByteData, indexPositionData,
+				filterPositionData);
+
+		sstableFile.write(dataToWrite);
 
 		IndexData[] indexes = indexList.toArray(new IndexData[indexList.size()]);
 		SSTable sstable = new SSTable(sstableFile, indexes, indexPosition, filterPosition, itemCount, bloomFilter,

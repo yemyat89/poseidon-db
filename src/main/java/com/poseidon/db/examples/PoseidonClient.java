@@ -85,8 +85,6 @@ public class PoseidonClient {
 			in.read(value);
 
 			socket.close();
-			out.close();
-			in.close();
 		}
 
 		return (value == null || value.length == 0) ? null : value;
@@ -110,8 +108,6 @@ public class PoseidonClient {
 			in.read(successBuf);
 
 			socket.close();
-			out.close();
-			in.close();
 		}
 
 		return successBuf[0] == 1;
@@ -134,8 +130,6 @@ public class PoseidonClient {
 			in.read(successBuf);
 
 			socket.close();
-			out.close();
-			in.close();
 		}
 
 		return (successBuf[0] == 1);

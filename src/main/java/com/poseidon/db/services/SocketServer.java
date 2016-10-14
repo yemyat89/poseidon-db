@@ -5,7 +5,6 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.apache.log4j.Logger;
@@ -42,19 +41,18 @@ public class SocketServer {
 				DataOutputStream out = new DataOutputStream(connection.getOutputStream());
 
 				if (op == PUT_REQUEST) {
-					byte[] recordLengthBuf = new byte[4];
-					in.read(recordLengthBuf);
-					int recordLength = DataConversion.byteArrayToInt(recordLengthBuf);
 
-					byte[] keyLengthBuf = new byte[4];
-					in.read(keyLengthBuf);
-					int keyLength = DataConversion.byteArrayToInt(keyLengthBuf);
+					byte[] lengthDataBuf = new byte[8];
+					in.read(lengthDataBuf);
+
+					int recordLength = DataConversion.byteArrayToInt(IOUtils.getSubByteArray(lengthDataBuf, 0, 4));
+					int keyLength = DataConversion.byteArrayToInt(IOUtils.getSubByteArray(lengthDataBuf, 4, 8));
 
 					byte[] dataBuf = new byte[recordLength];
 					in.read(dataBuf);
 
-					byte[] key = Arrays.copyOfRange(dataBuf, 0, keyLength);
-					byte[] value = Arrays.copyOfRange(dataBuf, keyLength, recordLength);
+					byte[] value = IOUtils.getSubByteArray(dataBuf, keyLength, recordLength);
+					byte[] key = IOUtils.getSubByteArray(dataBuf, 0, keyLength);
 
 					boolean success = store.put(key, value);
 
@@ -68,7 +66,7 @@ public class SocketServer {
 					byte[] dataBuf = new byte[recordLength];
 					in.read(dataBuf);
 
-					byte[] key = Arrays.copyOfRange(dataBuf, 0, recordLength);
+					byte[] key = IOUtils.getSubByteArray(dataBuf, 0, recordLength);
 					byte[] value = store.get(key);
 
 					if (value == null) {
@@ -89,7 +87,7 @@ public class SocketServer {
 					byte[] dataBuf = new byte[recordLength];
 					in.read(dataBuf);
 
-					byte[] key = Arrays.copyOfRange(dataBuf, 0, recordLength);
+					byte[] key = IOUtils.getSubByteArray(dataBuf, 0, recordLength);
 
 					boolean success = store.delete(key);
 
@@ -99,8 +97,6 @@ public class SocketServer {
 					logger.warn("Unknown Resquest");
 				}
 
-				out.close();
-				in.close();
 				connection.close();
 			} catch (IOException e) {
 				e.printStackTrace();

@@ -3,6 +3,7 @@ package com.poseidon.db.representation;
 import java.io.DataOutput;
 import java.io.IOException;
 import com.poseidon.db.utils.DataConversion;
+import com.poseidon.db.utils.IOUtils;
 
 public class KeyValuePair implements Comparable<KeyValuePair> {
 	private DataItem key;
@@ -39,10 +40,11 @@ public class KeyValuePair implements Comparable<KeyValuePair> {
 		int recordLength = key.length() + value.length();
 		int keyLength = key.length();
 
-		out.write(DataConversion.intToByteArray(recordLength));
-		out.write(DataConversion.intToByteArray(keyLength));
-		out.write(key.getData());
-		out.write(value.getData());
+		byte[] recordLengthData = DataConversion.intToByteArray(recordLength);
+		byte[] keyLengthData = DataConversion.intToByteArray(keyLength);
+		byte[] dataToWrite = IOUtils.concatByteArrays(recordLengthData, keyLengthData, key.getData(), value.getData());
+
+		out.write(dataToWrite);
 	}
 
 	@Override
