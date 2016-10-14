@@ -29,6 +29,7 @@ public class Memtable {
 	private Hash hashFunction;
 	private CommitLog commitLog;
 	private ReentrantReadWriteLock rwLock;
+	private int totalByteCount;
 
 	public static Memtable createNewMemtable(ReentrantReadWriteLock rwLock, String logFilePath) {
 		return new Memtable(rwLock, logFilePath);
@@ -86,6 +87,10 @@ public class Memtable {
 
 			while (kvpFound != null) {
 				if (kvpFound.getKey().equals(key)) {
+					
+					totalByteCount -= kvpFound.getValue().getData().length;
+					totalByteCount += value.getData().length;
+					
 					kvpFound.setValue(value);
 
 					if (shouldLog) {
@@ -100,6 +105,9 @@ public class Memtable {
 			KeyValuePair kvpCurrent = new KeyValuePair(key, value);
 			kvpCurrent.setNext(kvPairs[index]);
 			kvPairs[index] = kvpCurrent;
+			
+			totalByteCount += kvpCurrent.getKey().getData().length;
+			totalByteCount += kvpCurrent.getValue().getData().length;
 
 			if (shouldLog) {
 				commitLog.writeToLog(CommitLog.LogOperation.PUT, kvpCurrent);
@@ -127,6 +135,10 @@ public class Memtable {
 			DataItem valueDt = get(key);
 
 			if (valueDt != null) {
+				
+				totalByteCount -= key.getData().length;
+				totalByteCount -= valueDt.getData().length;
+				
 				put(key, null, false);
 				commitLog.writeToLog(LogOperation.DELETE, new KeyValuePair(key, valueDt));
 			} else if (markIfNotFound) {
@@ -178,6 +190,10 @@ public class Memtable {
 	public int numberOfItems() {
 		return itemCount;
 	}
+	
+	public int getTotalByteCount() {
+		return totalByteCount;
+	}
 
 	public String getLogFilePath() {
 		return commitLog.getLogFilePath();
@@ -192,6 +208,7 @@ public class Memtable {
 		kvPairs = new KeyValuePair[INITIAL_CAPACITY];
 		hashFunction = new SimpleModuloHash(INITIAL_CAPACITY);
 		itemCount = 0;
+		totalByteCount = 0;
 		capacity = INITIAL_CAPACITY;
 
 		this.rwLock = rwLock;

@@ -19,7 +19,7 @@ import com.poseidon.db.representation.DataItem;
 public class KeyValueStore {
 
 	private final static Logger logger = Logger.getLogger(KeyValueStore.class);
-	public static final int MEM_TO_SSTABLE_THRESHOLD = 20000;
+	public static final int MEM_TO_SSTABLE_THRESHOLD = 128 * 1024 * 1024;
 
 	private static class MemtableSelector {
 		private Memtable primaryMemtable;
@@ -226,7 +226,7 @@ public class KeyValueStore {
 	}
 
 	private final void flushToSSTable() {
-		if (memtableSelector.getPrimaryMemtable().numberOfItems() >= MEM_TO_SSTABLE_THRESHOLD) {
+		if (memtableSelector.getPrimaryMemtable().getTotalByteCount() >= MEM_TO_SSTABLE_THRESHOLD) {
 			logger.info("Flushing " + memtableSelector.getPrimaryMemtable().numberOfItems() + " items to sstable.");
 			flush();
 		}
